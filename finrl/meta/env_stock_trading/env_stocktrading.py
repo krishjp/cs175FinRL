@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import List
+from copy import deepcopy
 
 import gymnasium as gym
 import matplotlib
@@ -10,6 +11,7 @@ import pandas as pd
 from gymnasium import spaces
 from gymnasium.utils import seeding
 from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 matplotlib.use("Agg")
 
@@ -98,6 +100,7 @@ class StockTradingEnv(gym.Env):
         #         self.logger = Logger('results',[CSVOutputFormat])
         # self.reset()
         self._seed()
+        print("In edited stock env")
 
     def _sell_stock(self, index, action):
         def _do_sell_normal():
@@ -266,18 +269,18 @@ class StockTradingEnv(gym.Env):
             if (self.model_name != "") and (self.mode != ""):
                 df_actions = self.save_action_memory()
                 df_actions.to_csv(
-                    "results/actions_{}_{}_{}.csv".format(
+                    "results/csvBank/actions_{}_{}_{}.csv".format(
                         self.mode, self.model_name, self.iteration
                     )
                 )
                 df_total_value.to_csv(
-                    "results/account_value_{}_{}_{}.csv".format(
+                    "results/csvBank/account_value_{}_{}_{}.csv".format(
                         self.mode, self.model_name, self.iteration
                     ),
                     index=False,
                 )
                 df_rewards.to_csv(
-                    "results/account_rewards_{}_{}_{}.csv".format(
+                    "results/csvBank/account_rewards_{}_{}_{}.csv".format(
                         self.mode, self.model_name, self.iteration
                     ),
                     index=False,
@@ -552,5 +555,13 @@ class StockTradingEnv(gym.Env):
 
     def get_sb_env(self):
         e = DummyVecEnv([lambda: self])
+        obs = e.reset()
+        return e, obs
+
+    def get_multiproc_env(self, n=10):
+        def get_self():
+            return deepcopy(self)
+
+        e = SubprocVecEnv([get_self for _ in range(n)], start_method="fork")
         obs = e.reset()
         return e, obs
